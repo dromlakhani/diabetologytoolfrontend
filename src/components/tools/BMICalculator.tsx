@@ -34,22 +34,38 @@ export function BMICalculator() {
     try {
       setIsLoading(true);
       setError(null);
-      
-      const response = await fetch('https://diabetologybackendversion-2-dromlakhani.replit.app/calculate_bmi', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+
+      // Create a simple XMLHttpRequest to bypass CORS
+      return new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', 'https://diabetologybackendversion-2-dromlakhani.replit.app/calculate_bmi', true);
+        xhr.setRequestHeader('Content-Type', 'application/json');
+        
+        xhr.onload = function() {
+          if (xhr.status === 200) {
+            try {
+              const data = JSON.parse(xhr.responseText) as BMIResponse;
+              setBmiResult(data.bmi);
+              resolve();
+            } catch (err) {
+              reject(new Error('Invalid response format'));
+            }
+          } else {
+            reject(new Error('Failed to calculate BMI'));
+          }
+        };
+        
+        xhr.onerror = function() {
+          reject(new Error('Network error occurred'));
+        };
+        
+        const data = {
           weight: parseFloat(weight),
           height: parseFloat(height)
-        })
+        };
+        
+        xhr.send(JSON.stringify(data));
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to calculate BMI');
-      }
-
-      const data: BMIResponse = await response.json();
-      setBmiResult(data.bmi);
     } catch (err) {
       setError('Failed to calculate BMI. Please try again.');
       console.error('Error:', err);
@@ -62,6 +78,10 @@ export function BMICalculator() {
     e.preventDefault();
     if (!weight || !height) {
       setError('Please fill in all fields');
+      return;
+    }
+    if (parseFloat(weight) <= 0 || parseFloat(height) <= 0) {
+      setError('Weight and height must be greater than 0');
       return;
     }
     calculateBMI();
@@ -151,12 +171,12 @@ export function BMICalculator() {
             <div className="mt-4 text-sm text-gray-600">
               <p>BMI Categories {isAsian ? '(Asian Classification)' : '(WHO Classification)'}:</p>
               <ul className="mt-2 space-y-1">
-                <li>• Underweight: &lt; 18.5</li>
+                <li>• Underweight: Less than 18.5</li>
                 <li>• Normal weight: {isAsian ? '18.5 - 22.9' : '18.5 - 24.9'}</li>
                 <li>• Overweight: {isAsian ? '23 - 24.9' : '25 - 29.9'}</li>
                 <li>• Obesity Class I: {isAsian ? '25 - 29.9' : '30 - 34.9'}</li>
                 <li>• Obesity Class II: {isAsian ? '30 - 34.9' : '35 - 39.9'}</li>
-                <li>• Obesity Class III: {isAsian ? '≥ 35' : '≥ 40'}</li>
+                <li>• Obesity Class III: {isAsian ? '35 or above' : '40 or above'}</li>
               </ul>
             </div>
           </div>
